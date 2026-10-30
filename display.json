@@ -6,8 +6,9 @@
   "subGroup": "DSP Core",
   "kind": "rust",
   "class": "execution",
-  "entry": "APK:Softapps/CAPTURE/CAPTURE.Extractor-Engine/src/lib.rs",
+  "entry": "Cargo.toml",
   "description": "Rust engine for region detection, transient chopping, and sample slice extraction compiled to native and WebAssembly.",
   "topic": "APK.audio/Gui/Display/Extractor_Engine",
-  "autostart": false
+  "autostart": false,
+  "tech": "rust"
 }
