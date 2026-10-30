@@ -59,6 +59,9 @@ cargo build --release
 6. **Bounded on pathological input.** Empty input or a zero sample rate returns no regions; the region list is capped at 512 (`detect_regions_from_samples`, `MAX_REGIONS`).
 7. **Each rule has a test named for the behaviour** (`mod tests` in `src/lib.rs`).
 
+## 📚 Documentation
+The wiki — principles, architecture, delivery — starts at [Documentation/README.md](Documentation/README.md).
+
 <!-- wiki:smoke -->
 **Smoke test** — ✅ PASS 1/1 since 2026-10-30 12:51 EDT — [results](Documentation/%F0%9F%A7%A9Manual%20and%20Artifacts/SMOKE.md)
 <!-- /wiki:smoke -->
