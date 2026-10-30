@@ -58,3 +58,7 @@ cargo build --release
 5. **What you hear is what you export.** Fades apply the same gain the preview player uses, and cuts snap to zero crossings so exports do not click (`apply_fades`, `snap_to_zero_crossing`).
 6. **Bounded on pathological input.** Empty input or a zero sample rate returns no regions; the region list is capped at 512 (`detect_regions_from_samples`, `MAX_REGIONS`).
 7. **Each rule has a test named for the behaviour** (`mod tests` in `src/lib.rs`).
+
+<!-- wiki:smoke -->
+**Smoke test** — ✅ PASS 1/1 since 2026-10-30 12:51 EDT — [results](Documentation/%F0%9F%A7%A9Manual%20and%20Artifacts/SMOKE.md)
+<!-- /wiki:smoke -->
