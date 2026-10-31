@@ -17,6 +17,7 @@ A library is never shipped on its own; it lands inside what links it:
 Repository: `https://github.com/LikeDotAudio/APK.softapp.CAPTURE.Extractor-Engine`
 
 ## Delivered from the 2026-10-30 audit
+- **Release tag `v0.2.0`** — annotated tag at ee25c33, pushed 2026-10-31 with the owner's go-ahead.
 - **Consumers by commit, not by path** — the analyzer (`PROCESSOR.SampleAnalyzer/Cargo.toml`) and Scanalyzer (`Web_Front/src-tauri`, `wasm_extractor`) name this crate by `git = …, rev = …` with a locally excluded `.cargo/config.toml` `[patch]` back to this folder; the analyzer's build script finds this source through `links` (`DEP_EXTRACTOR_ENGINE_SRC_DIR`) instead of `../../CAPTURE/…`. Version bumped to 0.2.0 (the `Region` layout changed). Verified by `cargo test` here and in each consumer. Publishing a `v0.2.0` tag stays with the owner (see the audit).
 - **One check command** — `./check.sh` runs `cargo test` and the `wasm32-unknown-unknown` build. Verified: passes.
 - **One `.PEAK` region schema** — `PeakRegion` in `src/lib.rs` is the single definition; the Extractor's `Region` and the analyzer's `Core/peak.rs::Region` both flatten it (JSON unchanged). New test `a_peak_record_region_round_trips` parses a region as the analyzer writes it and as the Extractor UI sends it back. Verified: `cargo test` 12/12.
