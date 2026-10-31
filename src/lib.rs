@@ -15,24 +15,57 @@ use serde::{Deserialize, Serialize};
 /// Bound on the region count so a pathological file can't produce a runaway list.
 const MAX_REGIONS: usize = 512;
 
-/// One detected region ("chunk"). The seconds/peak/name fields mirror
-/// `sample_analyzer_rs` `Core/peak.rs::Region` (so the JSON matches the `.PEAK` schema);
-/// the fade fields are Extractor-only and `serde(default)` so records without them
-/// round-trip cleanly.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Region {
+/// One region of a `.PEAK` record — THE definition of the `.PEAK` region schema.
+///
+/// `PROCESSOR.SampleAnalyzer`'s `Core/peak.rs::Region` flattens this struct and adds its
+/// per-region `analysis`; [`Region`] below flattens it and adds the Extractor's fades. One
+/// struct, so the analyzer's stored regions and the Extractor's cuts cannot drift apart
+/// field by field (audit 2026-10-30, "schema defined twice"). Every field is
+/// `serde(default)` because records written before a field existed must still load.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PeakRegion {
     pub index: usize,
     pub start_seconds: f64,
     pub end_seconds: f64,
     pub duration_seconds: f64,
-    #[serde(default)]
+    /// Loudest RMS-envelope value inside the region (linear, 0..~1).
     pub peak_amplitude: f64,
-    #[serde(default)]
+    /// Empty from the analyzer; filled in by the user in the Extractor editor.
     pub name: String,
+}
+
+/// One detected region ("chunk") as the Extractor cuts it: the `.PEAK` fields
+/// ([`PeakRegion`], flattened, so the JSON is the `.PEAK` shape) plus the Extractor-only
+/// fades, which default to zero so `.PEAK` records without them round-trip cleanly.
+/// Derefs to the [`PeakRegion`], so `region.start_seconds` reads as it always did.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Region {
+    #[serde(flatten)]
+    pub span: PeakRegion,
     #[serde(default)]
     pub fade_in_seconds: f64,
     #[serde(default)]
     pub fade_out_seconds: f64,
+}
+
+impl std::ops::Deref for Region {
+    type Target = PeakRegion;
+    fn deref(&self) -> &PeakRegion {
+        &self.span
+    }
+}
+
+impl std::ops::DerefMut for Region {
+    fn deref_mut(&mut self) -> &mut PeakRegion {
+        &mut self.span
+    }
+}
+
+impl From<PeakRegion> for Region {
+    fn from(span: PeakRegion) -> Self {
+        Region { span, fade_in_seconds: 0.0, fade_out_seconds: 0.0 }
+    }
 }
 
 /// Fade shape applied to a slice. `Linear` reproduces the historical JS export exactly;
@@ -321,16 +354,14 @@ fn build_regions(
         if duration_seconds < p.minimum_region_seconds {
             continue;
         }
-        regions.push(Region {
+        regions.push(Region::from(PeakRegion {
             index: regions.len(),
             start_seconds,
             end_seconds,
             duration_seconds,
             peak_amplitude: pk,
             name: String::new(),
-            fade_in_seconds: 0.0,
-            fade_out_seconds: 0.0,
-        });
+        }));
         if regions.len() >= MAX_REGIONS {
             break;
         }
@@ -391,16 +422,14 @@ pub fn detect_regions_from_samples(samples: &[f32], sample_rate: u32, p: &Detect
         if duration_seconds < p.minimum_region_seconds {
             continue;
         }
-        regions.push(Region {
+        regions.push(Region::from(PeakRegion {
             index: regions.len(),
             start_seconds,
             end_seconds,
             duration_seconds,
             peak_amplitude: pk,
             name: String::new(),
-            fade_in_seconds: 0.0,
-            fade_out_seconds: 0.0,
-        });
+        }));
         if regions.len() >= MAX_REGIONS {
             break;
         }
@@ -727,5 +756,35 @@ mod tests {
         let a = s[snapped - 1];
         let b = s[snapped];
         assert!((a <= 0.0 && b >= 0.0) || (a >= 0.0 && b <= 0.0), "not a zero crossing");
+    }
+
+    /// A region exactly as `oa_sample_analyzer` writes it inside a `.PEAK` record
+    /// (`regions.regions[n]`, with its per-region `analysis`), and one as the Extractor
+    /// UI sends it back (with fades). Both parse; the `.PEAK` fields keep their names and
+    /// values when written again, and the analyzer-only `analysis` is not invented.
+    #[test]
+    fn a_peak_record_region_round_trips() {
+        let from_peak = r#"{"index":2,"start_seconds":0.125,"end_seconds":0.5,"duration_seconds":0.375,"peak_amplitude":0.71,"name":"","analysis":null}"#;
+        let r: Region = serde_json::from_str(from_peak).expect("a .PEAK region parses");
+        assert_eq!(r.index, 2);
+        assert_eq!(r.start_seconds, 0.125);
+        assert_eq!(r.fade_in_seconds, 0.0);
+        let back: serde_json::Value = serde_json::to_value(&r).unwrap();
+        for key in ["index", "start_seconds", "end_seconds", "duration_seconds", "peak_amplitude", "name"] {
+            assert!(back.get(key).is_some(), "{key} lost on the way back");
+        }
+        assert!(back.get("analysis").is_none(), "the engine never writes the analyzer's field");
+
+        let from_ui = r#"{"index":0,"start_seconds":1.0,"end_seconds":2.0,"duration_seconds":1.0,"peak_amplitude":0.5,"name":"kick","fade_in_seconds":0.01,"fade_out_seconds":0.02}"#;
+        let r: Region = serde_json::from_str(from_ui).unwrap();
+        assert_eq!(r.name, "kick");
+        assert_eq!(r.fade_out_seconds, 0.02);
+        let again: Region = serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
+        assert_eq!(again, r);
+
+        // A record from before a field existed still loads (every PeakRegion field defaults).
+        let old: PeakRegion = serde_json::from_str(r#"{"index":1,"start_seconds":0.0,"end_seconds":1.0}"#).unwrap();
+        assert_eq!(old.duration_seconds, 0.0);
+        assert!(old.name.is_empty());
     }
 }

@@ -19,7 +19,8 @@
 
 | Item | Purpose |
 |---|---|
-| `Region` | One detected chunk; seconds/peak/name match the `.PEAK` schema (`sample_analyzer_rs` `Core/peak.rs::Region`), fade fields are `serde(default)` |
+| `PeakRegion` | The `.PEAK` region schema — its one definition; the analyzer's `Core/peak.rs::Region` flattens it |
+| `Region` | One detected chunk: a flattened `PeakRegion` plus the Extractor's `serde(default)` fade fields |
 | `DetectParams` | Gate parameters. `Default` = the Extractor UI's algorithm (open −40 dB, close −46 dB hysteresis, 0.15 s min silence, 0.05 s min region, 10 ms attack / 30 ms release pad, transient-aware onset, zero-crossing snap, noise-floor lift 9 dB). `legacy()` = single threshold, no padding or refinement — the analyzer's path. |
 | `amplitude_envelope` | RMS envelope at ~200 fps (hop = sr/200) |
 | `detect_regions_with_params` | Regions from a precomputed envelope (analyzer parity path) |
@@ -30,21 +31,19 @@
 
 Region count is capped at 512 (`MAX_REGIONS`).
 
-### Who links it (by `path =` dependency)
+### Who links it (by `git = …, rev = …`, patched to this folder locally)
 - `SCANALYZER.Like.audio/Web_Front/wasm_extractor/Cargo.toml` — the WASM wrapper run in a Web Worker
 - `SCANALYZER.Like.audio/Web_Front/src-tauri/Cargo.toml` — the Tauri desktop build, in-process
 - `PROCESSOR/PROCESSOR.SampleAnalyzer/Cargo.toml` — the sample analyzer
 
-`SCANALYZER.Like.audio/extractor_engine_rs` and `SCANALYZER.Like.audio/01_CAPTURES/CAPTURE.Extractor-Engine` are symlinks to this folder.
-
-`display.json` declares topic `APK.audio/Gui/Display/Extractor_Engine`; a library has no bus connection and nothing publishes on it.
+All three pin the same commit (see [ARCHITECTURE](Documentation/%F0%9F%A7%A9Manual%20and%20Artifacts/ARCHITECTURE.md#use)). `display.json` declares no topic: a library has no bus connection.
 
 ---
 
 ## 🚀 Build & test
 
 ```bash
-cargo test          # 11 unit tests in src/lib.rs (gate, hysteresis, noise-floor lift, fades, zero-cross, WAV header)
+./check.sh          # cargo test (12: gate, hysteresis, noise-floor lift, fades, zero-cross, WAV header, .PEAK round trip) + wasm32 build
 cargo build --release
 ```
 
