@@ -23,5 +23,12 @@ Repository: `https://github.com/LikeDotAudio/APK.softapp.CAPTURE.Extractor-Engin
 - **One `.PEAK` region schema** — `PeakRegion` in `src/lib.rs` is the single definition; the Extractor's `Region` and the analyzer's `Core/peak.rs::Region` both flatten it (JSON unchanged). New test `a_peak_record_region_round_trips` parses a region as the analyzer writes it and as the Extractor UI sends it back. Verified: `cargo test` 12/12.
 - **Dead topic dropped** — `display.json` no longer declares `APK.audio/Gui/Display/Extractor_Engine`; a library has no bus. The launcher tile is unchanged (WEB.OsApi derives a default topic for the snapshot).
 
+## Delivered 2026-11-12
+
+From this repository's own commits (the commit message is the record):
+
+- wiki: lanes, README and smoke result refreshed (wiki.py + smoke.py) (`5055b3f`)
+- docs(smoke): pass — results in the wiki (`4b12052`)
+
 ## Releases
 - **Released `2.0.0`, tag `v2.0.0`** (2026-11-01, ROAD-3452, the owner's V2) — no SDK pin; every manifest says 2.0.0; GitHub release `v2.0.0`.
